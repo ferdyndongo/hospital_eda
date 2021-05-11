@@ -1,0 +1,72 @@
+---
+title: "Data Analysis for Hospitals"
+output: html_notebook
+---
+
+0. Libraries
+```{r libraries}
+library(tidyverse)
+```
+
+
+1. Upload data
+```{r upload_data1}
+general <- read.csv("~/PycharmProjects/Data Analysis for Hospitals/Data Analysis for Hospitals/task/test/general.csv")
+general %>% head()
+```
+
+```{r upload_data2}
+prenatal <- read.csv("~/PycharmProjects/Data Analysis for Hospitals/Data Analysis for Hospitals/task/test/prenatal.csv")
+prenatal %>% head()
+```
+
+
+```{r upload_data3}
+sports <- read.csv("~/PycharmProjects/Data Analysis for Hospitals/Data Analysis for Hospitals/task/test/sports.csv")
+sports %>% head()
+```
+
+2. Rename column names and merge data
+```{r merge_data}
+data <- general %>% dplyr::bind_rows(
+  prenatal %>% dplyr::rename('hospital'=HOSPITAL, 'gender'=Sex) %>% dplyr::bind_rows(
+    sports %>% dplyr::rename('hospital'=Hospital, 'gender'=Male.female)
+    )
+  ) %>% dplyr::select(-X)
+data %>% head()
+```
+
+3. Delete all the empty rows, replace NaN values in the gender column of the prenatal hospital with f and replace the NaN values in the bmi, diagnosis, blood_test, ecg, ultrasound, mri, xray, children, months columns with zeros.
+```{r}
+
+# data %>% dplyr::filter_all(all_vars(is.na(.) | .==''))  # select all empty rows
+data <- data %>% dplyr::filter(! hospital == '')
+# correct the gender
+data$gender <- ifelse (data$gender=='female' | data$gender=='woman' | data$gender=='' | is.na(data$gender), 'f', 'm')
+# replace all others missing values with 0
+data[is.na(data) | data == ""] <- 0
+data %>% head()
+```
+
+* Distribution on patients by hospital
+```{r hospital_distribution}
+data %>% dplyr::group_by(hospital) %>% dplyr::count()
+ggplot(data) + geom_bar(mapping = aes(hospital))
+```
+
+* Distribution of diagnosis in the sports hospital
+```{r sport_diagnosis}
+diagnosis <- data %>% dplyr::filter(hospital == 'sports') %>% dplyr::group_by(diagnosis) %>% dplyr::count()
+diagnosis
+pie(x = diagnosis$n, labels = diagnosis$diagnosis)
+```
+* Difference in median age between general hospital and sports hospital
+```{r}
+data %>% dplyr::filter(hospital =='general' | hospital == 'sports') %>% dplyr::group_by(hospital) %>% dplyr::summarise(age_med = median(age))
+```
+
+* violin plot of growth distribution by hospitals
+```{r}
+ggplot(data) + geom_violin(mapping = aes(x = hospital, y = height))
+```
+
